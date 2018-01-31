@@ -1,4 +1,5 @@
 var mysql = require('mysql');
+var request = require('request');
 
 function connectToDatabase(config, callback){
     console.log("Connecting to database...");
@@ -36,6 +37,30 @@ var config = {
     database: "spotify_artist_finder_db"
 }
 
+function getAccessToken(clientID, clientSecret){
+    var options = {
+        url: "https://accounts.spotify.com/api/token",
+        grant_type: "client_credentials",
+        headers:{
+            "Authorization": "Basic " + btoa(clientID + ":" + clientSecret); 
+        }
+    }
+
+    function callback(error, resp, body){
+        console.log(response.statusCode);
+        console.log(body);
+    }
+
+    request(options, callback);
+}
+
+function runWeeklyUpdate(conn){
+    clientID = "ff1c1bafd14c4fedaa1ff416b8186130";
+    clientSecret = "378b8df5f7504b8f925ed729fdae3763";
+
+    accessToken = getAccessToken(clientID, clientSecret);
+}
+
 connectToDatabase(config, function(conn){
-    insertToDatabase(conn, "artist_info", "'12345', 'node', 'nodeGen', 3");
+    runWeeklyUpdate(conn);
 });
