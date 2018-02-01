@@ -68,7 +68,7 @@ function getAccessToken(clientID, clientSecret, callback){
 
 function searchForArtists(accessToken, conn){
     try {
-        var genreFile = fs.readFileSync("../python/genre_list.txt");
+        var genreFile = fs.readFileSync("../python/genre_list.txt", "utf8");
     }
     catch(e){
         console.log("ERROR READING FROM GENRE LIST FILE");
@@ -76,7 +76,10 @@ function searchForArtists(accessToken, conn){
         process.exit(1);
     }
     var genreList = genreFile.split("|");
-    console.log(genreList.toString());
+    
+    for (genre in genreList){
+        console.log(genreList[genre]);
+    }
 }
 
 function runWeeklyUpdate(conn){
