@@ -37,28 +37,45 @@ var config = {
     database: "spotify_artist_finder_db"
 }
 
-function getAccessToken(clientID, clientSecret){
+function getAccessToken(clientID, clientSecret, callback){
     var options = {
         url: "https://accounts.spotify.com/api/token",
-        grant_type: "client_credentials",
-        headers:{
-            "Authorization": "Basic " + btoa(clientID + ":" + clientSecret); 
+        method: "post",
+        form: {
+            grant_type: "client_credentials"
+        },
+        headers: {
+            "Authorization": "Basic " + Buffer.from(clientID + ":" + clientSecret).toString("base64") 
+        },
+        json:true
+    }
+
+    function respCallback(err, resp, body){
+        if(resp.statusCode != 200){
+            console.log("ERROR RETRIEVING ACCESS TOKEN");
+            console.log(err);
+            process.exit(1);
+        }
+        else{
+            console.log("Spotify access token retrieved");
+            callback(body.access_token);
         }
     }
 
-    function callback(error, resp, body){
-        console.log(response.statusCode);
-        console.log(body);
-    }
+    request(options, respCallback);
+}
 
-    request(options, callback);
+function searchForArtists(accessToken, conn){
+    console.log("searchin");
 }
 
 function runWeeklyUpdate(conn){
     clientID = "ff1c1bafd14c4fedaa1ff416b8186130";
     clientSecret = "378b8df5f7504b8f925ed729fdae3763";
 
-    accessToken = getAccessToken(clientID, clientSecret);
+    getAccessToken(clientID, clientSecret, function(accessToken){
+        searchForArtists(accessToken, conn);
+    });
 }
 
 connectToDatabase(config, function(conn){
