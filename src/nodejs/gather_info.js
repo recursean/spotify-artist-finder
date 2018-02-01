@@ -67,16 +67,23 @@ function getAccessToken(clientID, clientSecret, callback){
 }
 
 function scrapeArtistResults(err, resp, body){
-    if(resp.statusCode != 200){
-        console.log("ERROR WITH ARTIST SEARCH QUERY");
-        console.log(err);
+    if(resp.statusCode == 200){
+        for (artist in body.artists.items){
+            console.log(body.artists.items[artist].id);
+            console.log(body.artists.items[artist].name);
+            console.log(body.artists.items[artist].genres.toString()); 
+        }
+    }
+
+    else if(resp.statusCode == 429){
+        console.log(resp.caseless.dict['retry-after']);
         process.exit(1);
     }
+
     else{
-        for (artist in body.artists){
-            console.log(body.artists[artist].name)
-            process.exit(1);
-        }
+        console.log("ERROR WITH ARTIST SEARCH QUERY");
+        console.log(resp);
+        process.exit(1);
     }
 }
 
@@ -93,7 +100,7 @@ function searchForArtists(accessToken, conn){
     
     for (genre in genreList){
         var options = {
-            url: "https://api.spotify.com/v1/search?q=year%3A2017%20genre:%22" + genreList[genre].replace(" ", "%20"+ "%22&type=artist&market=US",
+            url: "https://api.spotify.com/v1/search?q=year%3A2017%20genre:%22" + genreList[genre].replace(" ", "%20") + "%22&type=artist&market=US",
             method: "get",
             headers: {
                 "Authorization": "Bearer " + accessToken 
@@ -101,9 +108,7 @@ function searchForArtists(accessToken, conn){
             json:true
         }
 
-        request(options, function(){
-            scrapeArtistResults();
-        })
+        request(options, scrapeArtistResults);
     }
 }
 
