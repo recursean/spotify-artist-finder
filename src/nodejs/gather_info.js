@@ -1,5 +1,6 @@
 var mysql = require('mysql');
 var request = require('request');
+var fs = require('fs');
 
 function connectToDatabase(config, callback){
     console.log("Connecting to database...");
@@ -66,7 +67,16 @@ function getAccessToken(clientID, clientSecret, callback){
 }
 
 function searchForArtists(accessToken, conn){
-    console.log("searchin");
+    try {
+        var genreFile = fs.readFileSync("../python/genre_list.txt");
+    }
+    catch(e){
+        console.log("ERROR READING FROM GENRE LIST FILE");
+        console.log(e.stack);
+        process.exit(1);
+    }
+    var genreList = genreFile.split("|");
+    console.log(genreList.toString());
 }
 
 function runWeeklyUpdate(conn){
