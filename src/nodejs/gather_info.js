@@ -66,6 +66,20 @@ function getAccessToken(clientID, clientSecret, callback){
     request(options, respCallback);
 }
 
+function scrapeArtistResults(err, resp, body){
+    if(resp.statusCode != 200){
+        console.log("ERROR WITH ARTIST SEARCH QUERY");
+        console.log(err);
+        process.exit(1);
+    }
+    else{
+        for (artist in body.artists){
+            console.log(body.artists[artist].name)
+            process.exit(1);
+        }
+    }
+}
+
 function searchForArtists(accessToken, conn){
     try {
         var genreFile = fs.readFileSync("../python/genre_list.txt", "utf8");
@@ -78,7 +92,18 @@ function searchForArtists(accessToken, conn){
     var genreList = genreFile.split("|");
     
     for (genre in genreList){
-        console.log(genreList[genre]);
+        var options = {
+            url: "https://api.spotify.com/v1/search?q=year%3A2017%20genre:%22" + genreList[genre].replace(" ", "%20"+ "%22&type=artist&market=US",
+            method: "get",
+            headers: {
+                "Authorization": "Bearer " + accessToken 
+            },
+            json:true
+        }
+
+        request(options, function(){
+            scrapeArtistResults();
+        })
     }
 }
 
