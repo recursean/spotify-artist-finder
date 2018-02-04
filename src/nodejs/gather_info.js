@@ -2,6 +2,13 @@ var mysql = require('mysql');
 var request = require('request');
 var fs = require('fs');
 
+function sleep(seconds){
+    console.log("Sleeping for " + seconds);
+    var currentTime = new Date().getTime();
+
+    while(currentTime + (seconds * 1000) >= new Date().getTime()){}
+}
+
 function connectToDatabase(config, callback){
     console.log("Connecting to database...");
     
@@ -19,16 +26,40 @@ function connectToDatabase(config, callback){
     });
 }
 
-function insertToDatabase(conn, table, valueString){
-    conn.query("insert into " + table + " VALUES( " + valueString + ")", 
+function insertToDB(conn, values){
+    conn.query("insert into artist_info (id, name)  VALUES( '" + values[0] + "','" + values[1].replace("'", "\\'")  + "')", 
         function(err){
             if(err){
-                console.log("ERROR INSERTING RECORD INTO " + table + ": " + err);
-            }
-            else{
-                console.log("Inserted record");
+                console.log("ERROR INSERTING RECORD INTO artist_info: " + err);
             }
         });
+
+    if(values.length == 4){
+        conn.query("insert into artist_detail (id, image_url)  VALUES( '" + values[0] + "','" + values[3]  + "')", 
+            function(err){
+                if(err){
+                    console.log("ERROR INSERTING RECORD INTO artist_detail: " + err);
+                }
+        });
+    }
+    
+    else{
+        conn.query("insert into artist_detail (id)  VALUES( '" + values[0]  + "')", 
+            function(err){
+                if(err){
+                    console.log("ERROR INSERTING RECORD INTO artist_detail: " + err);
+                }
+        });
+    }
+    
+    for(genre in values[2]){
+        conn.query("insert into genres (id, genre)  VALUES( '" + values[0] + "','" + values[2][genre].replace("'", "\\'")  + "')", 
+            function(err){
+                if(err){
+                    console.log("ERROR INSERTING RECORD INTO genres: " + err);
+                }
+            });
+    }
 }
 
 var config = {
@@ -66,18 +97,55 @@ function getAccessToken(clientID, clientSecret, callback){
     request(options, respCallback);
 }
 
-function scrapeArtistResults(err, resp, body){
+function scrapeArtistResults(conn, artistObj){
+    if(typeof artistObj.images[0] != 'undefined')
+        insertToDB(conn, [artistObj.id, artistObj.name, artistObj.genres, artistObj.images[0].url]);
+    else
+        insertToDB(conn, [artistObj.id, artistObj.name, artistObj.genres]);
+}
+
+function analyzeResults(conn, err, resp, body){
     if(resp.statusCode == 200){
+        if(sleeping)
+            sleeping = false;
+
         for (artist in body.artists.items){
-            console.log(body.artists.items[artist].id);
-            console.log(body.artists.items[artist].name);
-            console.log(body.artists.items[artist].genres.toString()); 
+            scrapeArtistResults(conn, body.artists.items[artist]);
+        }
+        if(body.artists.next){
+                var options = {
+                    url: body.artists.next,
+                    method: "get",
+                    headers: {
+                        "Authorization": resp.request.headers.Authorization 
+                    },
+                    json:true
+                }
+                
+            request(options, function(err, resp, body){
+                analyzeResults(conn, err, resp, body);
+            });
         }
     }
 
     else if(resp.statusCode == 429){
-        console.log(resp.caseless.dict['retry-after']);
-        process.exit(1);
+        //don't sleep for each 429 recieved after the first, as they were all sent during retry-after period. thus should be good after sleep
+        if(!sleeping){
+            sleeping = true;
+            sleep(resp.caseless.dict['retry-after']);
+        }
+        var options = {
+            url: resp.request.href,
+            method: "get",
+            headers: {
+                "Authorization": resp.request.headers.Authorization 
+            },
+            json: true
+        }
+        
+        request(options, function(err, resp, body){
+            analyzeResults(conn, err, resp, body);
+        });
     }
 
     else{
@@ -85,6 +153,8 @@ function scrapeArtistResults(err, resp, body){
         console.log(resp);
         process.exit(1);
     }
+
+
 }
 
 function searchForArtists(accessToken, conn){
@@ -107,8 +177,10 @@ function searchForArtists(accessToken, conn){
             },
             json:true
         }
-
-        request(options, scrapeArtistResults);
+        
+        request(options, function(err, resp, body){
+            analyzeResults(conn, err, resp, body);
+        });
     }
 }
 
@@ -120,6 +192,8 @@ function runWeeklyUpdate(conn){
         searchForArtists(accessToken, conn);
     });
 }
+
+var sleeping = false;
 
 connectToDatabase(config, function(conn){
     runWeeklyUpdate(conn);
