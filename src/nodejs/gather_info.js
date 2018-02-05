@@ -27,39 +27,41 @@ function connectToDatabase(config, callback){
 }
 
 function insertToDB(conn, values){
+    console.log("inserting record for " + values[1] + " genre: " + values[2][0]);
     conn.query("insert into artist_info (id, name)  VALUES( '" + values[0] + "','" + values[1].replace("'", "\\'")  + "')", 
         function(err){
             if(err){
-                console.log("ERROR INSERTING RECORD INTO artist_info: " + err);
+                console.log("ERROR INSERTING RECORD INTO artist_info for: " + values[1] + ":" + values[2][0] + " "  + err);
+            }
+            else{
+                if(values.length == 4){
+                    conn.query("insert into artist_detail (id, image_url)  VALUES( '" + values[0] + "','" + values[3]  + "')", 
+                        function(err){
+                            if(err){
+                                console.log("ERROR INSERTING RECORD INTO artist_detail for: " + values[1] + ":" + values[2][0] + " "  + err);
+                            }
+                        });
+                }
+            
+                else{
+                    conn.query("insert into artist_detail (id)  VALUES( '" + values[0]  + "')", 
+                        function(err){
+                            if(err){
+                                console.log("ERROR INSERTING RECORD INTO artist_detail for: " + values[1] + ":" + values[2][0] + " " + err);
+                            }
+                    });
+                }
+            
+                for(genre in values[2]){
+                    conn.query("insert into genres (id, genre)  VALUES( '" + values[0] + "','" + values[2][genre].replace("'", "\\'")  + "')", 
+                        function(err){
+                            if(err){
+                                console.log("ERROR INSERTING RECORD INTO genres: " + values[1] + ":" + values[2][genre] + " " + err);
+                            }
+                        });
+                }
             }
         });
-
-    if(values.length == 4){
-        conn.query("insert into artist_detail (id, image_url)  VALUES( '" + values[0] + "','" + values[3]  + "')", 
-            function(err){
-                if(err){
-                    console.log("ERROR INSERTING RECORD INTO artist_detail: " + err);
-                }
-        });
-    }
-    
-    else{
-        conn.query("insert into artist_detail (id)  VALUES( '" + values[0]  + "')", 
-            function(err){
-                if(err){
-                    console.log("ERROR INSERTING RECORD INTO artist_detail: " + err);
-                }
-        });
-    }
-    
-    for(genre in values[2]){
-        conn.query("insert into genres (id, genre)  VALUES( '" + values[0] + "','" + values[2][genre].replace("'", "\\'")  + "')", 
-            function(err){
-                if(err){
-                    console.log("ERROR INSERTING RECORD INTO genres: " + err);
-                }
-            });
-    }
 }
 
 var config = {
@@ -105,34 +107,40 @@ function scrapeArtistResults(conn, artistObj){
 }
 
 function analyzeResults(conn, err, resp, body){
-    if(resp.statusCode == 200){
-        if(sleeping)
+    if(typeof resp != "undefined" && resp.statusCode == 200){
+        if(sleeping){
             sleeping = false;
-
-        for (artist in body.artists.items){
-            scrapeArtistResults(conn, body.artists.items[artist]);
+            console.log("Done sleeping");
         }
-        if(body.artists.next){
-                var options = {
-                    url: body.artists.next,
-                    method: "get",
-                    headers: {
-                        "Authorization": resp.request.headers.Authorization 
-                    },
-                    json:true
-                }
+        if(body.artists.total > 0){
+            for (artist in body.artists.items){
+                scrapeArtistResults(conn, body.artists.items[artist]);
+            }
+            if(body.artists.next){
+                    var options = {
+                        url: body.artists.next,
+                        method: "get",
+                        headers: {
+                            "Authorization": resp.request.headers.Authorization 
+                        },
+                        json:true
+                    }
                 
-            request(options, function(err, resp, body){
-                analyzeResults(conn, err, resp, body);
-            });
+                request(options, function(err, resp, body){
+                    analyzeResults(conn, err, resp, body);
+                });
+            }
         }
     }
 
-    else if(resp.statusCode == 429){
+    else if(typeof resp != "undefined" && (resp.statusCode == 429 || resp.statusCode == 502)){
         //don't sleep for each 429 recieved after the first, as they were all sent during retry-after period. thus should be good after sleep
         if(!sleeping){
             sleeping = true;
-            sleep(resp.caseless.dict['retry-after']);
+            if(resp.statusCode == 429)
+                sleep(resp.caseless.dict['retry-after']);
+            else
+                sleep(10);
         }
         var options = {
             url: resp.request.href,
@@ -150,8 +158,11 @@ function analyzeResults(conn, err, resp, body){
 
     else{
         console.log("ERROR WITH ARTIST SEARCH QUERY");
-        console.log(resp);
-        process.exit(1);
+        if(typeof resp == "undefined")
+            console.log("UNDEFINED RESPONSE");
+        else
+            console.log(resp);
+        //process.exit(1);
     }
 
 
