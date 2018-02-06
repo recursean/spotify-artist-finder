@@ -26,17 +26,16 @@ function connectToDatabase(config, callback){
     });
 }
 
-function insertToDB(conn, ids, names){
-    //ids & names arr will have same length
-    for(i = 0; i < ids.length; i++){
-        console.log("inserting record for " + names[i]);
-        conn.query("insert into artist_info (id, name)  VALUES( '" + ids[i] + "','" + names[i].replace("'", "\\'")  + "')", 
-            function(err){
-                if(err){
-                    console.log("ERROR INSERTING RECORD INTO artist_info for: " + names[i] + ":" + err);
-                }
-        });
-    }
+function insertToDB(conn){
+    conn.query("insert into artist_info (id, name)  VALUES ?", [artistInfo], 
+        function(err){
+            if(err){
+                console.log("ERROR INSERTING RECORD INTO artist_info :" + err);
+            }
+            else{
+                console.log("Inserted " + artistInfo.length + " records.");
+            }
+    });
 }
 
 var config = {
@@ -75,15 +74,9 @@ function getAccessToken(clientID, clientSecret, callback){
 }
 
 function scrapeAlbumResults(conn, albumObj){
-    var ids = [];
-    var names = [];
-
     for(artist in albumObj.artists){
-        ids.push(albumObj.artists[artist].id);
-        names.push(albumObj.artists[artist].name);
+        artistInfo.push([albumObj.artists[artist].id, albumObj.artists[artist].name]);
     }
-    
-    insertToDB(conn, ids, names);
 }
 
 function analyzeResults(conn, err, resp, body){
@@ -109,6 +102,9 @@ function analyzeResults(conn, err, resp, body){
                 request(options, function(err, resp, body){
                     analyzeResults(conn, err, resp, body);
                 });
+            }
+            else{
+                insertToDB(conn);
             }
         }
     }
@@ -149,22 +145,20 @@ function analyzeResults(conn, err, resp, body){
 }
 
 function searchForArtists(accessToken, conn){
-    var alphabet = "abcdefghijklmnopqrstuvwxyz".split("");
-    for (letterAlbum in alphabet){
-        for(letterArtist in alphabet){
-            var options = {
-                url: "https://api.spotify.com/v1/search?q=album:" + alphabet[letterAlbum] + "*+artist:" + alphabet[letterArtist] + "*+year:2017-2018&type=album&market=US",
-                method: "get",
-                headers: {
-                    "Authorization": "Bearer " + accessToken 
-                },
-                json:true
-            }
-        
-            request(options, function(err, resp, body){
-                analyzeResults(conn, err, resp, body);
-            });
+    var alphabet = "a".split("");
+    for (letter in alphabet){
+        var options = {
+            url: "https://api.spotify.com/v1/search?type=album&q=artist:" + alphabet[letter] + "+year:2017-2018&market=US",
+            method: "get",
+            headers: {
+                "Authorization": "Bearer " + accessToken 
+            },
+            json:true
         }
+        
+        request(options, function(err, resp, body){
+           analyzeResults(conn, err, resp, body);
+        });
     }
 }
 
@@ -178,6 +172,7 @@ function runWeeklyUpdate(conn){
 }
 
 var sleeping = false;
+var artistInfo = [];
 
 connectToDatabase(config, function(conn){
     runWeeklyUpdate(conn);

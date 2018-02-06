@@ -205,7 +205,8 @@ function runWeeklyUpdate(conn){
 }
 
 var sleeping = false;
-
+console.log([1,2] == [1,2]);
+process.exit(1);
 connectToDatabase(config, function(conn){
     runWeeklyUpdate(conn);
 });

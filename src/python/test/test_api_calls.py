@@ -24,7 +24,7 @@ def get_access_token(client_id, client_secret):
 
 def run_api_test(access_token):
     headers = {'Authorization':'Bearer ' + access_token}
-    res = requests.get('https://api.spotify.com/v1/search?q=album:a*+artist:a*+year:2017-2018&market=US&type=album', 
+    res = requests.get('https://api.spotify.com/v1/search?type=album&q=artist:asking+year:2017-2018&market=US', 
             headers = headers);
     if res.status_code != 200:
         print(res.status_code + ' Error in getting related artists');
