@@ -84,6 +84,22 @@ function scrapeSearchResults(conn, albumObj){
     }
 }
 
+function scrapeArtistSearchResults(conn, artistObj, lastFlag){
+    if(artistObj.name.replace(/[^\x00-\x7F]/g, "") != ""){
+        if(artistObj.images)
+            artistInfo.push([artistObj.id, artistObj.name, artistObj.images[0].url]);
+        else
+            artistInfo.push([artistObj.id, artistObj.name, ""]);
+
+        genreList.push([artistObj.id, artistObj.genres]);
+
+        if(lastFlag){
+            lastFlag = false; 
+            insertToDB();  
+        }
+    }
+}
+
 function analyzeSearchResults(conn, err, resp, body){
     if(typeof resp != "undefined" && resp.statusCode == 200){
         if(sleeping){
@@ -147,36 +163,17 @@ function analyzeSearchResults(conn, err, resp, body){
     }
 }
 
-function analyzeArtistSearchResults(conn, err, resp, body){
+function analyzeArtistSearchResults(conn, err, resp, body, lastFlag){
     if(typeof resp != "undefined" && resp.statusCode == 200){
         if(sleeping){
             sleeping = false;
             console.log("Done sleeping");
         }
-        if(body.albums.total > 0){
-            for (album in body.albums.items){
-                scrapeSearchResults(conn, body.albums.items[album]);
-            }
-            if(body.albums.next){
-                    var options = {
-                        url: body.albums.next,
-                        method: "get",
-                        headers: {
-                            "Authorization": resp.request.headers.Authorization 
-                        },
-                        json:true
-                    }
-                
-                request(options, function(err, resp, body){
-                    analyzeSearchResults(conn, err, resp, body);
-                });
-            }
-            else{
-                getArtistDetail(conn, ids);
-            }
+        for (artist in body.artists){
+            scrapeArtistSearchResults(conn, body.artists[artist], lastFlag);
         }
     }
-
+       
     else if(typeof resp != "undefined" && (resp.statusCode == 429 || resp.statusCode == 502 || resp.statusCode == 503)){
         //don't sleep for each 429 recieved after the first, as they were all sent during retry-after period. thus should be good after sleep
         if(!sleeping){
@@ -197,25 +194,30 @@ function analyzeArtistSearchResults(conn, err, resp, body){
         }
         
         request(options, function(err, resp, body){
-            analyzeSearchResults(conn, err, resp, body);
+            analyzeArtistSearchResults(conn, err, resp, body, lastFlag);
         });
     }
 
     else{
-        console.log("ERROR WITH INITIAL SEARCH QUERY");
+        console.log("ERROR WITH ARTIST DETAILS SEARCH QUERY");
         if(typeof resp == "undefined")
             console.log("UNDEFINED RESPONSE");
         else
             console.log(resp);
     }
 }
+
 function getArtistDetail(conn, ids){
     artistIdList = "";
+    lastFlag = false;
+
     for(i = 0; i > ids.length; i++){
         if(i % 50 != 0){
             artistIdList += ids[0] + ",";
         }
-        else{
+        if(i == ids.length-1 || i % 50 == 0){
+            if(i == ids.length-1)
+                lastFlag = true;
             var options = {
                 url: "https://api.spotify.com/v1/artists?ids=" + artistIdList,
                 method: "get",
@@ -226,8 +228,10 @@ function getArtistDetail(conn, ids){
             }
 
             request(options, function(err, resp, body){
-                analyzeArtistSearchResults(conn, err, resp, body);
+                analyzeArtistSearchResults(conn, err, resp, body, lastFlag);
             });
+
+            artistIdList = "";
         }
     }
 }
@@ -261,6 +265,7 @@ var sleeping = false;
 // [0] - artist id, [1] - album id
 var ids = [];
 var artistInfo = [];
+var genreList = [];
 
 var config = {
     host: "127.0.0.1",
