@@ -65,9 +65,22 @@ function getAccessToken(callback){
     }
 
     function respCallback(err, resp, body){
-        if(resp.statusCode != 200){
+        if(typeof resp == "undefined" | resp.statusCode != 200){
             console.log("ERROR RETRIEVING ACCESS TOKEN");
-            console.log(err);
+
+            if(typeof resp == "undefined")
+                console.log("UNDEFINED RESPONSE");
+            else
+                console.log(resp);
+            if(typeof body == "undefined")
+                console.log("UNDEFINED BODY");
+            else
+                console.log(body);
+            if(typeof err == "undefined")
+                console.log("UNDEFINED ERR");
+            else
+                console.log(err);
+
             process.exit(1);
         }
         else{
@@ -221,37 +234,55 @@ function analyzeArtistSearchResults(conn, err, resp, body, lastFlag){
     }
 }
 
-function getArtistDetail(conn, ids){
-    artistIdList = "";
-    lastFlag = false;
-    console.log("Starting to look for artist details, but sleeping first");
-    sleep(120);
-    for(i = 0; i < ids.length; i++){
-        if(startTime + (expiresIn * 1000) > new Date().getTime()){
-            getAccessToken();
-        }
+function searchForArtistDetail(conn){
+    var lastFlag = false;
+    var artistIdList = "";
 
-        artistIdList += ids[i][0] + ",";
-        if(i % 100 == 0)
-            sleep(5);
-        if(i == ids.length-1 || i % 49 == 0){
-            var options = {
-                url: "https://api.spotify.com/v1/artists?ids=" + artistIdList.substring(0, artistIdList.length-1),
-                method: "get",
-                headers: {
-                    "Authorization": "Bearer " + accessToken 
-                },
-                json:true
-            }
-            request(options, function(err, resp, body){
-                if(i == ids.length-1)
-                    lastFlag = true;
-                analyzeArtistSearchResults(conn, err, resp, body, lastFlag);
-            });
-
-            artistIdList = "";
+    console.log(new Date().getTime() + ": " + artistIds.length + " artists left");
+    for(var i = 0; i < 50; i++){
+        if(artistIds.length == 0){
+            lastFlag = true;
+            clearInterval(searchingForDetail);
+            break;
         }
+        artistIdList += artistIds.pop() + ",";
     }
+    var options = {
+        url: "https://api.spotify.com/v1/artists?ids=" + artistIdList.substring(0, artistIdList.length-1),
+        method: "get",
+        headers: {
+            "Authorization": "Bearer " + accessToken 
+        },
+        json:true
+    }
+
+    request(options, function(err, resp, body){
+        analyzeArtistSearchResults(conn, err, resp, body, lastFlag);
+    });
+
+    artistIdList = "";
+    
+    if(startTime + ((expiresIn - 500) * 1000) > new Date().getTime()){
+        startTime = new Date.getTime();
+        console.log("Getting new access token");
+        getAccessToken();
+    }
+}
+
+function getArtistDetail(conn){
+    //get only unique artist ids
+    for(var id in ids){
+        artistIds.push(ids[id][0]);
+    }
+    artistIds = [... new Set(artistIds)];
+
+    console.log("Starting to look for " + artistIds.length + " unique artist details, but sleeping first");
+    sleep(120);
+
+    searchingForDetail = setInterval(function(){
+        if(artistIds.length > 0)
+            searchForArtistDetail(conn);
+    }, 5000);
 }
 
 function searchForArtists(conn){
@@ -281,12 +312,14 @@ var sleeping = false;
 var ids = [];
 var artistInfo = [];
 var genreList = [];
+var artistIds = [];
 
 var accessToken;
 var refreshToken;
 var expiresIn;
 
 var startTime = new Date().getTime();
+console.log("Starting data collection at: " + startTime);
 
 var config = {
     host: "127.0.0.1",
