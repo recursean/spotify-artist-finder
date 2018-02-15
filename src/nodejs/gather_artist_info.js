@@ -28,28 +28,30 @@ function connectToDatabase(config, callback){
 
 function insertToDB(conn){
     //get only unique artists
-    artistInfo = [... new Set(artistInfo)];
+    //artistInfo = [... new Set(artistInfo)];
 
-    artistInfoFinal = [];
+    //artistInfoFinal = [];
     //split into arr of arrs for bulk insert
-    for(artist in artistInfo){
-        artistInfoFinal.push(artistInfo[artist].split("////"));
-    }
+    //for(artist in artistInfo){
+    //    artistInfoFinal.push(artistInfo[artist].split("////"));
+    //}
 
-    conn.query("insert ignore into artist_info (id, name)  VALUES ?", [artistInfoFinal], 
-        function(err){
-            if(err){
-                console.log("ERROR INSERTING RECORD INTO artist_info :" + err);
-            }
-            else{
-                console.log("Inserted " + artistInfoFinal.length + " records.");
-                getArtistDetail(artistInfoFinal);
-            }
-    });
+    if(genreList.length > 0){
+        conn.query("insert ignore into artist_info (id, name, image_url)  VALUES ?", [artistInfo], 
+            function(err){
+                if(err){
+                    console.log("ERROR INSERTING RECORD INTO artist_info :" + err);
+                }
+                else{
+                    console.log("Inserted " + artistInfo.length + " records.");
+                    genreList = [];
+                }
+        });
+    }
 }
 
 
-function getAccessToken(clientID, clientSecret, callback){
+function getAccessToken(callback){
     var options = {
         url: "https://accounts.spotify.com/api/token",
         method: "post",
@@ -70,7 +72,10 @@ function getAccessToken(clientID, clientSecret, callback){
         }
         else{
             console.log("Spotify access token retrieved");
-            callback(body.access_token);
+            accessToken = body.access_token;
+            expiresIn = parseInt(body.expires_in) - 500;
+            if(callback)
+                callback();
         }
     }
 
@@ -86,16 +91,16 @@ function scrapeSearchResults(conn, albumObj){
 
 function scrapeArtistSearchResults(conn, artistObj, lastFlag){
     if(artistObj.name.replace(/[^\x00-\x7F]/g, "") != ""){
-        if(artistObj.images)
+        if(typeof artistObj.images[0] != "undefined")
             artistInfo.push([artistObj.id, artistObj.name, artistObj.images[0].url]);
         else
             artistInfo.push([artistObj.id, artistObj.name, ""]);
 
         genreList.push([artistObj.id, artistObj.genres]);
 
-        if(lastFlag){
-            lastFlag = false; 
-            insertToDB();  
+        if(lastFlag == true){
+            console.log("Inserting records to artist_info");
+            insertToDB(conn);  
         }
     }
 }
@@ -125,6 +130,7 @@ function analyzeSearchResults(conn, err, resp, body){
                 });
             }
             else{
+                console.log("Found " + ids.length + " artists with new music in the last 2 weeks.");
                 getArtistDetail(conn, ids);
             }
         }
@@ -204,30 +210,42 @@ function analyzeArtistSearchResults(conn, err, resp, body, lastFlag){
             console.log("UNDEFINED RESPONSE");
         else
             console.log(resp);
+        if(typeof body == "undefined")
+            console.log("UNDEFINED BODY");
+        else
+            console.log(body);
+        if(typeof err == "undefined")
+            console.log("UNDEFINED RESPONSE");
+        else
+            console.log(err);
     }
 }
 
 function getArtistDetail(conn, ids){
     artistIdList = "";
     lastFlag = false;
-
-    for(i = 0; i > ids.length; i++){
-        if(i % 50 != 0){
-            artistIdList += ids[0] + ",";
+    console.log("Starting to look for artist details, but sleeping first");
+    sleep(120);
+    for(i = 0; i < ids.length; i++){
+        if(startTime + (expiresIn * 1000) > new Date().getTime()){
+            getAccessToken();
         }
-        if(i == ids.length-1 || i % 50 == 0){
-            if(i == ids.length-1)
-                lastFlag = true;
+
+        artistIdList += ids[i][0] + ",";
+        if(i % 100 == 0)
+            sleep(5);
+        if(i == ids.length-1 || i % 49 == 0){
             var options = {
-                url: "https://api.spotify.com/v1/artists?ids=" + artistIdList,
+                url: "https://api.spotify.com/v1/artists?ids=" + artistIdList.substring(0, artistIdList.length-1),
                 method: "get",
                 headers: {
                     "Authorization": "Bearer " + accessToken 
                 },
                 json:true
             }
-
             request(options, function(err, resp, body){
+                if(i == ids.length-1)
+                    lastFlag = true;
                 analyzeArtistSearchResults(conn, err, resp, body, lastFlag);
             });
 
@@ -236,7 +254,7 @@ function getArtistDetail(conn, ids){
     }
 }
 
-function searchForArtists(accessToken, conn){
+function searchForArtists(conn){
     var options = {
         url: "https://api.spotify.com/v1/search?q=tag:new&type=album&market=US&limit=50",
         method: "get",
@@ -247,16 +265,13 @@ function searchForArtists(accessToken, conn){
     }
 
     request(options, function(err, resp, body){
-        analyzeResults(conn, err, resp, body);
+        analyzeSearchResults(conn, err, resp, body);
     });
 }
 
 function runWeeklyUpdate(conn){
-    clientID = "ff1c1bafd14c4fedaa1ff416b8186130";
-    clientSecret = "378b8df5f7504b8f925ed729fdae3763";
-
-    getAccessToken(clientID, clientSecret, function(accessToken){
-        searchForArtists(accessToken, conn);
+    getAccessToken(function(){
+        searchForArtists(conn);
     });
 }
 
@@ -267,12 +282,21 @@ var ids = [];
 var artistInfo = [];
 var genreList = [];
 
+var accessToken;
+var refreshToken;
+var expiresIn;
+
+var startTime = new Date().getTime();
+
 var config = {
     host: "127.0.0.1",
     user: "node",
     password: "nodejs",
     database: "spotify_artist_finder_db"
 }
+
+clientID = "ff1c1bafd14c4fedaa1ff416b8186130";
+clientSecret = "378b8df5f7504b8f925ed729fdae3763";
 
 connectToDatabase(config, function(conn){
     runWeeklyUpdate(conn);
