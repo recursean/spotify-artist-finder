@@ -27,29 +27,39 @@ function connectToDatabase(config, callback){
 }
 
 function insertToDB(conn){
-    //get only unique artists
-    //artistInfo = [... new Set(artistInfo)];
-
-    //artistInfoFinal = [];
-    //split into arr of arrs for bulk insert
-    //for(artist in artistInfo){
-    //    artistInfoFinal.push(artistInfo[artist].split("////"));
-    //}
-
-    if(genreList.length > 0){
-        conn.query("insert ignore into artist_info (id, name, image_url)  VALUES ?", [artistInfo], 
-            function(err){
-                if(err){
-                    console.log("ERROR INSERTING RECORD INTO artist_info :" + err);
-                }
-                else{
-                    console.log("Inserted " + artistInfo.length + " records.");
-                    genreList = [];
-                }
-        });
-    }
+    conn.query("insert ignore into artist_info (id, name, image_url)  VALUES ?", [artistInfo], 
+        function(err){
+            if(err){
+                console.log("ERROR INSERTING RECORD INTO artist_info :" + err);
+            }
+            else{
+                console.log("Inserted " + artistInfo.length + " records.");
+                
+                conn.query("insert ignore into genres (id, genre) VALUES ?", [genreList],
+                    function(err){
+                        if(err){
+                            console.log("ERROR INSERTING INTO GENRES");
+                        }
+                        else{
+                            console.log("Inserted " + genreList.length + " records into genre table.");
+                        
+                            for(album in albumInfo){ 
+                                conn.query("update artist_info SET most_recent_release_title = '" + albumInfo[album][1] + "', most_recent_release_date = '" + albumInfo[album][2] + 
+                                            "', label = '" + albumInfo[album][3] + "', song_preview_url = '" + albumInfo[album][4] + "' where id = '" + albumInfo[album][0] + "';",
+                                    function(err){
+                                        if(err){
+                                            console.log("ERROR INSERTING DETAIL INTO artist_info :" + err);
+                                        }
+                                        else{
+                                            console.log("Inserted detail records");
+                                        }
+                                });
+                            }
+                        }
+                });
+            }  
+    });
 }
-
 
 function getAccessToken(callback){
     var options = {
@@ -102,6 +112,18 @@ function scrapeSearchResults(conn, albumObj){
     }
 }
 
+function scrapeArtistAlbumSearchResults(conn, albumObj, lastFlag){
+    for(artist in albumObj.artists){ 
+        if(albumObj.artists[artist].name.replace(/[^\x00-\x7F]/g, "") != "")
+            albumInfo.push([albumObj.artists[artist].id, albumObj.name, artistObj.release_date, albumObj.label, albumObj.tracks[0].preview_url]);
+    }
+
+    if(lastFlag == true){
+        console.log("Inserting into DB.");
+        insertToDB(conn);  
+    }
+}
+
 function scrapeArtistSearchResults(conn, artistObj, lastFlag){
     if(artistObj.name.replace(/[^\x00-\x7F]/g, "") != ""){
         if(typeof artistObj.images[0] != "undefined")
@@ -109,11 +131,13 @@ function scrapeArtistSearchResults(conn, artistObj, lastFlag){
         else
             artistInfo.push([artistObj.id, artistObj.name, ""]);
 
-        genreList.push([artistObj.id, artistObj.genres]);
+        for(genre in artistObj.genres){
+            genreList.push([artistObj.id, artistObj.genres[genre]]);
+        }
 
         if(lastFlag == true){
-            console.log("Inserting records to artist_info");
-            insertToDB(conn);  
+            console.log("Getting artist album detail.");
+            getArtistAlbumDetail(conn);  
         }
     }
 }
@@ -182,6 +206,60 @@ function analyzeSearchResults(conn, err, resp, body){
     }
 }
 
+function analyzeArtistAlbumSearchResults(conn, err, resp, body, lastFlag){
+    if(typeof resp != "undefined" && resp.statusCode == 200){
+        if(sleeping){
+            sleeping = false;
+            console.log("Done sleeping");
+        }
+        for (album in body.albums){
+            scrapeArtistAlbumSearchResults(conn, body.albums[album], lastFlag);
+            if(lastFlag)
+                lastFlag = false;
+        }
+    }
+       
+    else if(typeof resp != "undefined" && (resp.statusCode == 429 || resp.statusCode == 502 || resp.statusCode == 503)){
+        //don't sleep for each 429 recieved after the first, as they were all sent during retry-after period. thus should be good after sleep
+        if(!sleeping){
+            sleeping = true;
+            if(resp.statusCode == 429)
+                sleep(resp.caseless.dict['retry-after']);
+            //502 --> Bad Gateway, 503 --> service unavailable, assuming overload of traffic
+            else
+                sleep(10);
+        }
+        var options = {
+            url: resp.request.href,
+            method: "get",
+            headers: {
+                "Authorization": resp.request.headers.Authorization 
+            },
+            json: true
+        }
+        
+        request(options, function(err, resp, body){
+            analyzeArtistAlbumSearchResults(conn, err, resp, body, lastFlag);
+        });
+    }
+
+    else{
+        console.log("ERROR WITH ARTIST ALBUM DETAILS SEARCH QUERY");
+        if(typeof resp == "undefined")
+            console.log("UNDEFINED RESPONSE");
+        else
+            console.log(resp);
+        if(typeof body == "undefined")
+            console.log("UNDEFINED BODY");
+        else
+            console.log(body);
+        if(typeof err == "undefined")
+            console.log("UNDEFINED RESPONSE");
+        else
+            console.log(err);
+    }
+}
+
 function analyzeArtistSearchResults(conn, err, resp, body, lastFlag){
     if(typeof resp != "undefined" && resp.statusCode == 200){
         if(sleeping){
@@ -190,6 +268,8 @@ function analyzeArtistSearchResults(conn, err, resp, body, lastFlag){
         }
         for (artist in body.artists){
             scrapeArtistSearchResults(conn, body.artists[artist], lastFlag);
+            if(lastFlag)
+                lastFlag = false;
         }
     }
        
@@ -234,6 +314,40 @@ function analyzeArtistSearchResults(conn, err, resp, body, lastFlag){
     }
 }
 
+function searchForArtistAlbumDetail(conn){
+    var lastFlag = false;
+    var albumIdList = "";
+
+    console.log(new Date().getTime() + ": " + albumIds.length + " albums left");
+    for(var i = 0; i < 20; i++){
+        if(albumIds.length == 0){
+            lastFlag = true;
+            clearInterval(searchingForDetail);
+            break;
+        }
+        albumIdList += albumIds.pop() + ",";
+    }
+    var options = {
+        url: "https://api.spotify.com/v1/artists?ids=" + albumIdList.substring(0, albumIdList.length-1),
+        method: "get",
+        headers: {
+            "Authorization": "Bearer " + accessToken 
+        },
+        json:true
+    }
+
+    request(options, function(err, resp, body){
+        analyzeArtistAlbumSearchResults(conn, err, resp, body, lastFlag);
+    });
+
+    albumIdList = "";
+    if(startTime + ((expiresIn - 500) * 1000) < new Date().getTime()){
+        startTime = new Date().getTime();
+        console.log("Getting new access token");
+        getAccessToken();
+    }
+}
+
 function searchForArtistDetail(conn){
     var lastFlag = false;
     var artistIdList = "";
@@ -261,12 +375,27 @@ function searchForArtistDetail(conn){
     });
 
     artistIdList = "";
-    
-    if(startTime + ((expiresIn - 500) * 1000) > new Date().getTime()){
-        startTime = new Date.getTime();
+    if(startTime + ((expiresIn - 500) * 1000) < new Date().getTime()){
+        startTime = new Date().getTime();
         console.log("Getting new access token");
         getAccessToken();
     }
+}
+
+function getArtistAlbumDetail(conn){
+    //get only album ids
+    for(var id in ids){
+        albumIds.push(ids[id][1]);
+    }
+
+    console.log("Starting to look for " + albumIds.length + " artist album details, but sleeping first");
+    sleep(120);
+
+    searchingForDetail = setInterval(function(){
+        if(albumIds.length > 0)
+            searchForArtistAlbumDetail(conn);
+    }, 1500);
+
 }
 
 function getArtistDetail(conn){
@@ -282,7 +411,7 @@ function getArtistDetail(conn){
     searchingForDetail = setInterval(function(){
         if(artistIds.length > 0)
             searchForArtistDetail(conn);
-    }, 5000);
+    }, 1500);
 }
 
 function searchForArtists(conn){
@@ -311,8 +440,10 @@ var sleeping = false;
 // [0] - artist id, [1] - album id
 var ids = [];
 var artistInfo = [];
+var albumInfo = [];
 var genreList = [];
 var artistIds = [];
+var albumIds = [];
 
 var accessToken;
 var refreshToken;
