@@ -117,10 +117,11 @@ function scrapeSearchResults(conn, albumObj){
 
 function scrapeArtistAlbumSearchResults(conn, albumObj, lastFlag){
     for(artist in albumObj.artists){ 
-        if(albumObj.artists[artist].name.replace(/[^\x00-\x7F]/g, "") != "")
+        if(albumObj.artists[artist].name.replace(/[^\x00-\x7F]/g, "") != ""){
             albumInfo.push([albumObj.artists[artist].id, albumObj.name, albumObj.release_date, albumObj.label, albumObj.tracks.items[0].preview_url]);
+        }
     }
-
+  
     if(lastFlag == true){
         console.log("Inserting into DB.");
         insertToDB(conn);  
@@ -395,12 +396,12 @@ function getArtistAlbumDetail(conn){
     }
 
     console.log("Starting to look for " + albumIds.length + " artist album details, but sleeping first");
-    //sleep(120);
+    sleep(120);
 
     searchingForDetail = setInterval(function(){
         if(albumIds.length > 0)
             searchForArtistAlbumDetail(conn);
-    }, 1500);
+    }, 1000);
 
 }
 
@@ -412,7 +413,7 @@ function getArtistDetail(conn){
     artistIds = [... new Set(artistIds)];
 
     console.log("Starting to look for " + artistIds.length + " unique artist details, but sleeping first");
-    //sleep(120);
+    sleep(120);
 
     searchingForDetail = setInterval(function(){
         if(artistIds.length > 0)
