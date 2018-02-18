@@ -42,16 +42,19 @@ function insertToDB(conn){
                         }
                         else{
                             console.log("Inserted " + genreList.length + " records into genre table.");
-                        
-                            for(album in albumInfo){ 
-                                conn.query("update artist_info SET most_recent_release_title = '" + albumInfo[album][1] + "', most_recent_release_date = '" + albumInfo[album][2] + 
-                                            "', label = '" + albumInfo[album][3] + "', song_preview_url = '" + albumInfo[album][4] + "' where id = '" + albumInfo[album][0] + "';",
+                            var idx = 1;
+                            for(album in albumInfo){    
+                                conn.query("update artist_info SET most_recent_release_title = '" + albumInfo[album][1].replace("'", "\\'") + "', most_recent_release_date = '" + albumInfo[album][2] + 
+                                            "', label = '" + albumInfo[album][3].replace("'", "\\'") + "', song_preview_url = '" + albumInfo[album][4] + "' where id = '" + albumInfo[album][0] + "';",
                                     function(err){
                                         if(err){
                                             console.log("ERROR INSERTING DETAIL INTO artist_info :" + err);
                                         }
                                         else{
-                                            console.log("Inserted detail records");
+                                            idx += 1;
+                                            console.log("Inserted " + idx + " detail records");
+                                            if(idx == albumInfo.length)
+                                                process.exit(0);
                                         }
                                 });
                             }
@@ -115,7 +118,7 @@ function scrapeSearchResults(conn, albumObj){
 function scrapeArtistAlbumSearchResults(conn, albumObj, lastFlag){
     for(artist in albumObj.artists){ 
         if(albumObj.artists[artist].name.replace(/[^\x00-\x7F]/g, "") != "")
-            albumInfo.push([albumObj.artists[artist].id, albumObj.name, artistObj.release_date, albumObj.label, albumObj.tracks[0].preview_url]);
+            albumInfo.push([albumObj.artists[artist].id, albumObj.name, albumObj.release_date, albumObj.label, albumObj.tracks.items[0].preview_url]);
     }
 
     if(lastFlag == true){
@@ -214,8 +217,9 @@ function analyzeArtistAlbumSearchResults(conn, err, resp, body, lastFlag){
         }
         for (album in body.albums){
             scrapeArtistAlbumSearchResults(conn, body.albums[album], lastFlag);
-            if(lastFlag)
+            if(lastFlag){
                 lastFlag = false;
+            }
         }
     }
        
@@ -317,8 +321,9 @@ function analyzeArtistSearchResults(conn, err, resp, body, lastFlag){
 function searchForArtistAlbumDetail(conn){
     var lastFlag = false;
     var albumIdList = "";
-
+    
     console.log(new Date().getTime() + ": " + albumIds.length + " albums left");
+    
     for(var i = 0; i < 20; i++){
         if(albumIds.length == 0){
             lastFlag = true;
@@ -328,7 +333,7 @@ function searchForArtistAlbumDetail(conn){
         albumIdList += albumIds.pop() + ",";
     }
     var options = {
-        url: "https://api.spotify.com/v1/artists?ids=" + albumIdList.substring(0, albumIdList.length-1),
+        url: "https://api.spotify.com/v1/albums?ids=" + albumIdList.substring(0, albumIdList.length-1),
         method: "get",
         headers: {
             "Authorization": "Bearer " + accessToken 
@@ -351,8 +356,9 @@ function searchForArtistAlbumDetail(conn){
 function searchForArtistDetail(conn){
     var lastFlag = false;
     var artistIdList = "";
-
+    
     console.log(new Date().getTime() + ": " + artistIds.length + " artists left");
+    
     for(var i = 0; i < 50; i++){
         if(artistIds.length == 0){
             lastFlag = true;
@@ -389,7 +395,7 @@ function getArtistAlbumDetail(conn){
     }
 
     console.log("Starting to look for " + albumIds.length + " artist album details, but sleeping first");
-    sleep(120);
+    //sleep(120);
 
     searchingForDetail = setInterval(function(){
         if(albumIds.length > 0)
@@ -406,7 +412,7 @@ function getArtistDetail(conn){
     artistIds = [... new Set(artistIds)];
 
     console.log("Starting to look for " + artistIds.length + " unique artist details, but sleeping first");
-    sleep(120);
+    //sleep(120);
 
     searchingForDetail = setInterval(function(){
         if(artistIds.length > 0)
@@ -446,7 +452,6 @@ var artistIds = [];
 var albumIds = [];
 
 var accessToken;
-var refreshToken;
 var expiresIn;
 
 var startTime = new Date().getTime();
