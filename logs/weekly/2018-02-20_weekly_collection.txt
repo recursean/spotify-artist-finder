@@ -1,0 +1,4 @@
+Starting data collection at: 1519093861976
+Connecting to database...
+Connected
+Spotify access token retrieved

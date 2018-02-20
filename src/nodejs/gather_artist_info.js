@@ -1,12 +1,47 @@
 var mysql = require('mysql');
 var request = require('request');
 var fs = require('fs');
+var nodemailer = require('nodemailer');
 
 function sleep(seconds){
     console.log("Sleeping for " + seconds);
     var currentTime = new Date().getTime();
 
     while(currentTime + (seconds * 1000) >= new Date().getTime()){}
+}
+
+function sendUpdate(conn, numArtists, numGenres, numAlbums){
+    var transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: 'spotifyartistfinder@gmail.com',
+            pass: 'finderartistspotify'
+        }
+    });
+
+    var time = new Date().getTime() - initTime;
+    
+    var mailOptions = {
+        from: 'spotifyartistfinder@gmail.com',
+        to: 'seanmcshane96@gmail.com',
+        subject: 'Weekly Data Collection',
+        text: 'Weekly data collection process has completed.\n Unique Artists: ' + numArtists + '\nGenres: ' + numGenres + '\nTotal Album Details: ' + numAlbums + '\n\nTook ' + time + 'ms'
+    };
+
+    transporter.sendMail(mailOptions, function(err, info){
+        if(err){
+            console.log('ERROR SENDING EMAIL UPDATE' + err);
+            process.exit(1);
+        }
+        else{
+            console.log('Email update sent. Exiting...');
+            conn.end(function(err){
+                if(err)
+                    console.log("ERROR CLOSING DATABASE CONNECTION" + err);
+                process.exit();
+            });
+        }
+    });
 }
 
 function connectToDatabase(config, callback){
@@ -44,8 +79,8 @@ function insertToDB(conn){
                             console.log("Inserted " + genreList.length + " records into genre table.");
                             var idx = 1;
                             for(album in albumInfo){    
-                                conn.query("update artist_info SET most_recent_release_title = '" + albumInfo[album][1].replace("'", "\\'") + "', most_recent_release_date = '" + albumInfo[album][2] + 
-                                            "', label = '" + albumInfo[album][3].replace("'", "\\'") + "', song_preview_url = '" + albumInfo[album][4] + "' where id = '" + albumInfo[album][0] + "';",
+                                conn.query("update artist_info SET most_recent_release_title = '" + albumInfo[album][1] + "', most_recent_release_date = '" + albumInfo[album][2] + 
+                                            "', label = '" + albumInfo[album][3] + "', song_preview_url = '" + albumInfo[album][4] + "' where id = '" + albumInfo[album][0] + "';",
                                     function(err){
                                         if(err){
                                             console.log("ERROR INSERTING DETAIL INTO artist_info :" + err);
@@ -54,7 +89,7 @@ function insertToDB(conn){
                                             idx += 1;
                                             console.log("Inserted " + idx + " detail records");
                                             if(idx == albumInfo.length)
-                                                process.exit(0);
+                                                sendUpdate(conn, artistInfo.length, genreList.length, albumInfo.length);
                                         }
                                 });
                             }
@@ -118,7 +153,7 @@ function scrapeSearchResults(conn, albumObj){
 function scrapeArtistAlbumSearchResults(conn, albumObj, lastFlag){
     for(artist in albumObj.artists){ 
         if(albumObj.artists[artist].name.replace(/[^\x00-\x7F]/g, "") != ""){
-            albumInfo.push([albumObj.artists[artist].id, albumObj.name, albumObj.release_date, albumObj.label, albumObj.tracks.items[0].preview_url]);
+            albumInfo.push([albumObj.artists[artist].id, albumObj.name.replace("'", "\\'"), albumObj.release_date, albumObj.label.replace("'", "\\'"), albumObj.tracks.items[0].preview_url]);
         }
     }
   
@@ -131,12 +166,12 @@ function scrapeArtistAlbumSearchResults(conn, albumObj, lastFlag){
 function scrapeArtistSearchResults(conn, artistObj, lastFlag){
     if(artistObj.name.replace(/[^\x00-\x7F]/g, "") != ""){
         if(typeof artistObj.images[0] != "undefined")
-            artistInfo.push([artistObj.id, artistObj.name, artistObj.images[0].url]);
+            artistInfo.push([artistObj.id, artistObj.name.replace("'", "\\'"), artistObj.images[0].url]);
         else
-            artistInfo.push([artistObj.id, artistObj.name, ""]);
+            artistInfo.push([artistObj.id, artistObj.name.replace("'", "\\'"), ""]);
 
         for(genre in artistObj.genres){
-            genreList.push([artistObj.id, artistObj.genres[genre]]);
+            genreList.push([artistObj.id, artistObj.genres[genre].replace("'", "\\'")]);
         }
 
         if(lastFlag == true){
@@ -396,7 +431,7 @@ function getArtistAlbumDetail(conn){
     }
 
     console.log("Starting to look for " + albumIds.length + " artist album details, but sleeping first");
-    sleep(120);
+    //sleep(120);
 
     searchingForDetail = setInterval(function(){
         if(albumIds.length > 0)
@@ -413,7 +448,7 @@ function getArtistDetail(conn){
     artistIds = [... new Set(artistIds)];
 
     console.log("Starting to look for " + artistIds.length + " unique artist details, but sleeping first");
-    sleep(120);
+    //sleep(120);
 
     searchingForDetail = setInterval(function(){
         if(artistIds.length > 0)
@@ -456,6 +491,7 @@ var accessToken;
 var expiresIn;
 
 var startTime = new Date().getTime();
+var initTime = startTime;
 console.log("Starting data collection at: " + startTime);
 
 var config = {
