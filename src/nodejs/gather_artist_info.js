@@ -431,7 +431,7 @@ function getArtistAlbumDetail(conn){
     }
 
     console.log("Starting to look for " + albumIds.length + " artist album details, but sleeping first");
-    //sleep(120);
+    sleep(120);
 
     searchingForDetail = setInterval(function(){
         if(albumIds.length > 0)
@@ -448,7 +448,7 @@ function getArtistDetail(conn){
     artistIds = [... new Set(artistIds)];
 
     console.log("Starting to look for " + artistIds.length + " unique artist details, but sleeping first");
-    //sleep(120);
+    sleep(120);
 
     searchingForDetail = setInterval(function(){
         if(artistIds.length > 0)

@@ -94,7 +94,7 @@ function sendUpdate(conn, numMetrics){
 }
 
 function insertToDatabase(conn){
-    conn.query("insert into artist_metrics (id, followers, popularity) VALUES ?", [metrics],
+    conn.query("insert ignore into artist_metrics (id, followers, popularity) VALUES ?", [metrics],
         function(err){
             if(err){
                 console.log("ERROR INSERTING INTO ARTIST_METRICS " + err);
