@@ -1,0 +1,8 @@
+Starting data collection at: 1520733601457
+Connecting to database...
+Connected
+Spotify access token retrieved
+Sleeping for 10
+Done sleeping
+Sleeping for 10
+Done sleeping

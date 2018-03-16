@@ -24,7 +24,7 @@ def get_access_token(client_id, client_secret):
 
 def run_api_test(access_token):
     headers = {'Authorization':'Bearer ' + access_token}
-    res = requests.get("https://api.spotify.com/v1/albums?ids=",
+    res = requests.get("https://api.spotify.com/v1/artists/0fxs5f6DPVHxYqEezaJ3oR",
            headers = headers);
     if res.status_code != 200:
         print(res);

@@ -101,10 +101,10 @@ function insertToDatabase(conn){
                 process.exit(1);
             }
             else{
-                console.log("Inserted " + metrics.length + " artist metrics.");
+                console.log("Inserted " + metrics.length + " artist metrics");
                 sendUpdate(conn, metrics.length);
             }
-        });
+    });
 }
 
 function scrapeArtistSearchResults(conn, artistObj, lastFlag){

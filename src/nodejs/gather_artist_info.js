@@ -83,6 +83,7 @@ function insertToDB(conn){
                                             "', label = '" + albumInfo[album][3] + "', song_preview_url = '" + albumInfo[album][4] + "' where id = '" + albumInfo[album][0] + "';",
                                     function(err){
                                         if(err){
+                                            idx += 1;
                                             console.log("ERROR INSERTING DETAIL INTO artist_info :" + err);
                                         }
                                         else{
