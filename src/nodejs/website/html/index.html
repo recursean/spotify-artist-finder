@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="../css/main.css">
+        <title>
+            Spotify Artist Finder
+        </title>
+    </head>
+
+    <body>
+        <div class="topnav">
+            <div class="titlebar">
+                <span id="name">SAR</span>
+                <span id="desc">Identifying emerging artists on Spotify</span>
+            </div>
+            <div>
+              <a class="active" href="">Rankings</a>
+              <a href="#about">About</a>
+              <input type="text" placeholder="Search..">
+            </div>
+        </div>
+        <div class="bodyContainer">
+            <table id="rankingsTable">
+                <tr>
+                </tr>
+            </table>
+            <div class="buttonContainer">
+                <form id="prevPage" method="get">
+                    <input type="text" name="start" class="defaultVals" id="lowVal">
+                    <button class="pagePicker" type="submit">Prev</button>
+                </form>
+                <form id="nextPage" method="get">
+                    <input type="text" name="start" class="defaultVals" id="highVal">
+                    <button class="pagePicker" type="submit">Next</button>
+                </form>
+            </div>
+            <div id="pageInfo"></div>
+            <script src="../js/main.js"></script>
+        </div>
+    </body>
+</html>
