@@ -130,3 +130,13 @@ form {
 .defaultVals {
     display:none;
 }
+
+.artistLink {
+    color:white;
+}
+
+#artistImage {
+    width:40%;
+    height:auto;
+    margin: 25px;
+}
