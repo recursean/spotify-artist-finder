@@ -71,6 +71,14 @@ app.get('/js/main.js', function (req, res) {
     res.sendFile("js/main.js", {root: __dirname });
 })
 
+app.get('/js/plotly-latest.min.js', function (req, res) {
+    res.sendFile("js/plotly-latest.min.js", {root: __dirname });
+})
+
+app.get('/js/fillCharts.js', function (req, res) {
+    res.sendFile("js/fillCharts.js", {root: __dirname });
+})
+
 function modifyRankingsPage(html, startIdx, resultSize, callback){
     conn.query("select distinct(b.name), a.score, c.genre, b.most_recent_release_date from (select * from artist_metrics limit " + resultSize + " offset " + 
                     (startIdx-1) + ") as a join artist_info as b on a.id = b.id left join genres as c on b.id = c.id;", function(err, result, fields) {
@@ -87,6 +95,7 @@ function modifyRankingsPage(html, startIdx, resultSize, callback){
 
             for(var i = 1; i <= resultSize; i++){
                 result[i-1].most_recent_release_date = (!result[i-1].most_recent_release_date ? "n/a" : result[i-1].most_recent_release_date.toString().substring(4, 15)); 
+                result[i-1].genre = (!result[i-1].genre ? "Not yet classified" : result[i-1].genre); 
                 tableString +=  "<tr>" +
                                     "<td>" + (i - 1 + (+startIdx)) + "</td>" +
                                     "<td><a class='artistLink' href='/?artist=" + result[i-1].name + "'>" + result[i-1].name + "</a></td>" +
@@ -109,15 +118,53 @@ function modifyRankingsPage(html, startIdx, resultSize, callback){
 }
 
 function modifyArtistPage(html, artist, callback){
-    conn.query("select * from (select * from artist_info where name='" + artist + "' order by most_recent_release_date desc limit 1) as a " + 
+    conn.query("select * from (select * from artist_info where name='" + artist + "' order by most_recent_release_date desc) as a " + 
                         "join artist_metrics as b on a.id=b.id left join genres as c on b.id=c.id;", function(err, result,fields) {
         if(err)
             console.log(err);
         else{
+            result[0].most_recent_release_date = (!result[0].most_recent_release_date ? "n/a" : result[0].most_recent_release_date.toString().substring(4, 15)); 
+            result[0].genre = (!result[0].genre ? "Not yet classified" : result[0].genre); 
+
             var dom = new JSDOM(html);
             var $ = require('jquery')(dom.window);
-            $(".bodyContainer").each(function () {
-                $(this).html("<img id='artistImage' src='" + result[0].image_url + "'>");
+            $("#artistImage").attr("src", result[0].image_url);
+        
+            $("#artistName").each(function() {
+                $(this).html("<b>" + result[0].name + "</b><br>" + 
+                             "<audio controls><source src='" + result[0].song_preview_url + "'>No preview available</audio>");
+            });
+
+            $("#artistDetail").each(function() {
+                $(this).html("<table id='artistDetailTable'>" + 
+                                "<tr><th>Genre</th><td>" + result[0].genre + "</td></tr>" +
+                                "<tr><th>Label</th><td>" + result[0].label + "</td></tr>" +
+                                "<tr><th>Followers</th><td>" + result[0].followers + "</td></tr>" +
+                                "<tr><th>Popularity</th><td>" + result[0].popularity + "</td></tr>" +
+                                "<tr><th>Score</th><td>" + result[0].score + "</td></tr>" +
+                                "<tr><th>Most Recent Release</th><td>" + result[0].most_recent_release_title + "</td></tr>" +
+                                "<tr><th>Recent Release Date</th><td>" + result[0].most_recent_release_date + "</td></tr>" +
+                            "</table>") 
+            });
+
+            var scoreString = "";
+            var dateString = "";
+
+            for(var i = result.length-1; i >= 0; i--){
+                dateString += "'" + result[i].date.toISOString().substring(0,10) + " 00:00:00',";
+                scoreString += result[i].score + ",";
+            }
+
+            dateString = dateString.substring(0, dateString.length-1);
+            scoreString = scoreString.substring(0, scoreString.length-1);
+            $("#scoreChart").each(function() {
+                $(this).html("<script>" +
+                                "var scores = [{" +
+                                    "x: [" + dateString + "]," +
+                                    "y: [" + scoreString + "]," +
+                                    "type: 'scatter'" +
+                                "}];" +
+                                "Plotly.newPlot('scoreChart', scores);");
             });
 
             callback(dom.window.document.documentElement.outerHTML);

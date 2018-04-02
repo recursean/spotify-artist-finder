@@ -2,6 +2,7 @@
 <html>
     <head>
         <link rel="stylesheet" href="../css/main.css">
+        <script src="../js/plotly-latest.min.js"></script>
         <title>
             Spotify Artist Finder
         </title>
@@ -10,7 +11,7 @@
     <body>
         <div class="topnav">
             <div class="titlebar">
-                <span id="name">SAR</span>
+                <span id="name">SAF</span>
                 <span id="desc">Identifying emerging artists on Spotify</span>
             </div>
             <div>
@@ -20,7 +21,15 @@
             </div>
         </div>
         <div class="bodyContainer">
-        
+            <img id="artistImage">
+            <div id="artistInfo">
+                <div id="artistName">
+                </div>
+                <div id="artistDetail">
+                </div>
+                <div id="scoreChart">
+                </div>
+            </div>        
         </div>
     </body>
 </html>
