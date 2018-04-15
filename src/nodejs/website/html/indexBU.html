@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="../css/main.css">
+        <title>
+            Spotify Artist Finder
+        </title>
+    </head>
+
+    <body>
+        <div class="topnav">
+            <div class="titlebar">
+                <span id="name">SAF</span>
+                <span id="desc">Identifying emerging artists on Spotify</span>
+            </div>
+            <div>
+              <a class="active" href="/">Rankings</a>
+              <a href="#about">About</a>
+              <form action="/search.html">
+                <input type="text" placeholder="Search.." name="search">
+              </form>
+            </div>
+        </div>
+        <div class="bodyContainer">
+            <div id='filtersDiv'>
+                <form id='filters'>
+                    <span class="filterLabel"><u>Genres</u></span><br>
+                    <input class="filters" id="pop" type="checkbox" name="genre" value="pop" autocomplete="off">Pop<br>
+                    <input class="filters" id="rock" type="checkbox" name="genre" value="rock">Rock<br>
+                    <input class="filters" id="hip-hop" type="checkbox" name="genre" value="hip-hop">Hip-Hop<br>
+                    <input class="filters" id="country" type="checkbox" name="genre" value="country">Country<br>
+                    <input class="filters" id="electronic" type="checkbox" name="genre" value="electronic">Electronic<br>
+                    <input class="filters" id="indie" type="checkbox" name="genre" value="indie">Indie<br>
+
+                    <span class="filterLabel"><u>Omit Labels</u></span><br>
+                    <input class="filters" id="umg" type="checkbox" name="label" value="umg">UMG<br>
+                    <input class="filters" id="sony" type="checkbox" name="label" value="sony">Sony<br>
+                    <input class="filters" id="warner" type="checkbox" name="label" value="warner">Warner<br>
+                    <br>
+                    <button class="pagePicker" type="submit">Apply</button>
+                </form>
+            </div>
+            <table id="rankingsTable">
+                <tr>
+                </tr>
+            </table>
+            <div class="buttonContainer">
+                <form id="prevPage" method="get">
+                    <input type="text" name="start" class="defaultVals" id="lowVal">
+                    <button class="pagePicker" type="submit">Prev</button>
+                </form>
+                <form id="nextPage" method="get">
+                    <input type="text" name="start" class="defaultVals" id="highVal">
+                    <button class="pagePicker" type="submit">Next</button>
+                </form>
+            </div>
+            <div id="pageInfo"></div>
+            <script src="../js/main.js"></script>
+        </div>
+    </body>
+</html>

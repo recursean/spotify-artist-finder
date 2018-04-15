@@ -1,0 +1,3 @@
+[1] "7012560 number of records with more than 7 records"
+[1] "212699 number of distinct artists"
+[1] "57300number of scores given"
