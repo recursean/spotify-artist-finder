@@ -16,6 +16,9 @@ function setURL(nextFlag){
             else
                 url += "&label=" + filtersForm.elements[i].value;
         }
+        else if(filtersForm.elements[i].type == "radio" && filtersForm.elements[i].checked){
+            url += "&size=" + filtersForm.elements[i].value;
+        }
     }   
     window.location.href = url;
 }

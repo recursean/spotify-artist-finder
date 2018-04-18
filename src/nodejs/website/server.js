@@ -55,8 +55,8 @@ app.get('/', function (req, res) {
             if(err)
                 console.log(err);
             else{
-                modifyRankingsPage(html, typeof req.query.start === "undefined" ? 1 : req.query.start, 25, typeof req.query.genre === "undefined" ? [] : req.query.genre, 
-                                        typeof req.query.label === "undefined" ? [] : req.query.label, function(modHTML){
+                modifyRankingsPage(html, typeof req.query.start === "undefined" ? 1 : req.query.start, typeof req.query.size === "undefined" ? 25 : req.query.size, 
+                                        typeof req.query.genre === "undefined" ? [] : req.query.genre, typeof req.query.label === "undefined" ? [] : req.query.label, function(modHTML){
                     res.send(modHTML);
                 });
             }
@@ -98,6 +98,13 @@ function modifyRankingsPage(html, startIdx, resultSize, genres, labels, callback
     var dom = new JSDOM(html);
     var $ = require('jquery')(dom.window);
     
+    if(resultSize == "25")
+        $("#size1").attr("checked", true);
+    else if(resultSize == "50")
+        $("#size2").attr("checked", true);
+    else if(resultSize == "100")
+        $("#size3").attr("checked", true);
+    
     var queryStr = "select * from daily_aggr ";
     if(genres.length != 0){
         queryStr += "where ";
@@ -122,6 +129,9 @@ function modifyRankingsPage(html, startIdx, resultSize, genres, labels, callback
             }
             else if(genres[i] == "indie"){
                 queryStr += "genre like '%indie%' or "
+            }
+            else if(genres[i] == "any"){
+                queryStr += "genre is not null or "
             }
         }
         queryStr = queryStr.substring(0, queryStr.length - 3);
@@ -217,28 +227,7 @@ function modifyArtistPage(html, artist, callback){
             $("#topTracks").each(function() {
                 $(this).html("<iframe src='https://open.spotify.com/embed?uri=spotify:artist:" + result[0].id + "&view=list' width='300' height='380' frameborder='0' allowtransparency='true' allow='encrypted-media'></iframe>");
             });      
-
-            var genreString = "";
-            conn.query("select genre from genres where id = '" + result[0].id + "';", function(err, result, fields) {
-                if(err)
-                    console.log(err);
-                else{
-                    for(var i = 0; i < result.length; i++){
-                        genreString += "<li>" + result[i].genre + "</li>";
-                    }
-                }
-            });
-
-            if(genreString != ""){
-                $("#genreList").each(function() {
-                    $(this).html("Genres <br><ul>" + genreString + "</ul>");
-                });
-            }
-            else{
-                $("#genreList").each(function() {
-                    $(this).html("Genres <br><ul><li>Not classified yet</li></ul>");
-                });
-            }
+            
             var scoreString = "";
             var dateString = "";
             var followersString = "";
@@ -301,7 +290,27 @@ function modifyArtistPage(html, artist, callback){
                                 "Plotly.newPlot('popularityChart', fig);");
             });
 
-            callback(dom.window.document.documentElement.outerHTML);
+            var genreString = "";
+            conn.query("select genre from genres where id = '" + result[0].id + "';", function(err, result2, fields) {
+                if(err)
+                    console.log(err);
+                else{
+                    for(var i = 0; i < result2.length; i++){
+                        genreString += "<li>" + result2[i].genre + "</li>";
+                    }
+                }
+                if(genreString == ""){
+                    $("#genreList").each(function() {
+                        $(this).html("Genres <br><ul><li>Not classified yet</li></ul>");
+                    });
+                }
+                else{
+                    $("#genreList").each(function() {
+                        $(this).html("Genres <br><ul>" + genreString + "</ul>");
+                    });
+                }
+                callback(dom.window.document.documentElement.outerHTML);
+            });
         }
     });
 }

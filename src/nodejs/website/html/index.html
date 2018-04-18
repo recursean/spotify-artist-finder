@@ -25,6 +25,7 @@
             <div id='filtersDiv'>
                 <form id='filters'>
                     <span class="filterLabel"><u>Genres</u></span><br>
+                    <input class="filters" id="any" type="checkbox" name="genre" value="any">Any<br>
                     <input class="filters" id="pop" type="checkbox" name="genre" value="pop" autocomplete="off">Pop<br>
                     <input class="filters" id="rock" type="checkbox" name="genre" value="rock">Rock<br>
                     <input class="filters" id="hip-hop" type="checkbox" name="genre" value="hip-hop">Hip-Hop<br>
@@ -37,6 +38,13 @@
                     <input class="filters" id="sony" type="checkbox" name="label" value="sony">Sony<br>
                     <input class="filters" id="warner" type="checkbox" name="label" value="warner">Warner<br>
                     <br>
+                    
+                    <span class="filterLabel"><u>Result Size</u></span><br>
+                    <input class="filters" id="size1" type="radio" name="size" value="25" checked>25<br>
+                    <input class="filters" id="size2" type="radio" name="size" value="50">50<br>
+                    <input class="filters" id="size3" type="radio" name="size" value="100">100<br>
+                    <br>
+
                     <button class="pagePicker" type="submit">Apply</button>
                 </form>
             </div>
