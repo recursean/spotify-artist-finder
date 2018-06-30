@@ -29,19 +29,25 @@
                 </div>
                 <div id="artistDetail">
                 </div>
-                <div id="genreList">
-                </div> 
-                <div id="topTracks">
-                </div>
             </div>      
+            <div id="genreList">
+            </div> 
+            <div id="topTracks">
+            </div>
             <div id="moreCharts">
-                <div id="followersChart">
+                <div class="tab">
+                    <button class="tablinks active" onclick="showGraph(event, 'scoreChart')">Score</button>
+                    <button class="tablinks" onclick="showGraph(event, 'followersChart')">Followers</button>
+                    <button class="tablinks" onclick="showGraph(event, 'popularityChart')">Popularity</button>
                 </div>
-                <div id="popularityChart">
+                <div class="perfTab" id="followersChart">
                 </div>
-                <div id="scoreChart">
+                <div class="perfTab" id="popularityChart">
+                </div>
+                <div class="perfTab" id="scoreChart">
                 </div>
             </div>
         </div>
+        <script src="../js/artistDetail.js"></script>
     </body>
 </html>

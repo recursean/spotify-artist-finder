@@ -56,7 +56,8 @@ app.get('/', function (req, res) {
                 console.log(err);
             else{
                 modifyRankingsPage(html, typeof req.query.start === "undefined" ? 1 : req.query.start, typeof req.query.size === "undefined" ? 25 : req.query.size, 
-                                        typeof req.query.genre === "undefined" ? [] : req.query.genre, typeof req.query.label === "undefined" ? [] : req.query.label, function(modHTML){
+                                        typeof req.query.genre === "undefined" ? [] : req.query.genre, typeof req.query.label === "undefined" ? [] : req.query.label, 
+                                        typeof req.query.order === "undefined" ? "score" : req.query.order, function(modHTML){
                     res.send(modHTML);
                 });
             }
@@ -82,8 +83,12 @@ app.get('/css/main.css', function (req, res) {
     res.sendFile("css/main.css", {root: __dirname });
 })
 
-app.get('/js/main.js', function (req, res) {
-    res.sendFile("js/main.js", {root: __dirname });
+app.get('/js/rankings.js', function (req, res) {
+    res.sendFile("js/rankings.js", {root: __dirname });
+})
+
+app.get('/js/artistDetail.js', function (req, res) {
+    res.sendFile("js/artistDetail.js", {root: __dirname });
 })
 
 app.get('/js/plotly-latest.min.js', function (req, res) {
@@ -94,7 +99,7 @@ app.get('/js/fillCharts.js', function (req, res) {
     res.sendFile("js/fillCharts.js", {root: __dirname });
 })
 
-function modifyRankingsPage(html, startIdx, resultSize, genres, labels, callback){
+function modifyRankingsPage(html, startIdx, resultSize, genres, labels, order, callback){
     var dom = new JSDOM(html);
     var $ = require('jquery')(dom.window);
     
@@ -105,6 +110,7 @@ function modifyRankingsPage(html, startIdx, resultSize, genres, labels, callback
     else if(resultSize == "100")
         $("#size3").attr("checked", true);
     
+    
     var queryStr = "select * from daily_aggr ";
     if(genres.length != 0){
         queryStr += "where ";
@@ -113,25 +119,22 @@ function modifyRankingsPage(html, startIdx, resultSize, genres, labels, callback
         for(var i = 0; i < genres.length; i++){
             $("#" + genres[i]).attr("checked", true);
             if(genres[i] == "pop"){
-                queryStr += "genre like '%pop%' or "
+                queryStr += "genres like '%pop%' or "
             }
             else if(genres[i] == "rock"){
-                queryStr += "genre like '%rock%' or genre like '%metal%' or "
+                queryStr += "genres like '%rock%' or genres like '%metal%' or genres like '%blues%' or genres like '%alternative%' or genres like '%grunge%' or genres like '%punk%' or genres like '%indie%' or "
             }
             else if(genres[i] == "hip-hop"){
-                queryStr += "genre like '%hip-hop%' or genre like '%rap%' or "
+                queryStr += "genres like '%hip-hop%' or genres like '%rap%' or "
             }
             else if(genres[i] == "country"){
-                queryStr += "genre like '%country%' or "
+                queryStr += "genres like '%country%' or genres like '%bluegrass%' or "
             }
             else if(genres[i] == "electronic"){
-                queryStr += "genre like '%electronic%' or genre like '%edm%' or "
-            }
-            else if(genres[i] == "indie"){
-                queryStr += "genre like '%indie%' or "
+                queryStr += "genres like '%electronic%' or genres like '%edm%' or genres like '%drum and bass%' or genres like '%dubstep%' or genres like '%hardstyle%' or genres like '%house%' or genres like '%vaporwave%' or genres like '%dance%' or genres like '%techno%' or "
             }
             else if(genres[i] == "any"){
-                queryStr += "genre is not null or "
+                queryStr += "genres is not null or "
             }
         }
         queryStr = queryStr.substring(0, queryStr.length - 3);
@@ -141,49 +144,71 @@ function modifyRankingsPage(html, startIdx, resultSize, genres, labels, callback
             queryStr += "where ";
         }
         else{
-            queryStr += "or ";
+            queryStr += "and (";
         }
         if(!Array.isArray(labels))
             labels = [labels];
         for(var i = 0; i < labels.length; i++){
             $("#" + labels[i]).attr("checked", true);
             if(labels[i] == "umg"){
-                queryStr += "label not like '%Universal Music Group%' or ";
+                queryStr += "label not like '%Universal Music Group%' or label not like '%UMG%' or label not like '%Interscope%' or label not like '%Geffen%' or label not like '%A&M%' or label not like '%Capitol Music%' or " +
+                                "label not like '%Republic Records%' or label not like '%Island Records%' or label not like '%Def Jam%' or ";
             }
             else if(labels[i] == "sony"){
-                queryStr += "label not like '%Sony%' or ";
+                queryStr += "label not like '%Sony%' or label not like '%Columbia%' or label not like '%RCA%' or label not like '%Epic Records%' or label not like '%Roc Nation%' or ";
             }
             else if(labels[i] == "warner"){
-                queryStr += "label not like '%Warner%' or ";
+                queryStr += "label not like '%Warner%' or label not like '%Atlantic%' or label not like '%Parlophone%' or ";
             }
         }
         queryStr = queryStr.substring(0, queryStr.length - 3);
+        if(genres.length != 0)
+            queryStr += ")";
     }
+
+    if(order == "score"){
+        $("#score").attr("checked", true);
+    }
+    else if(order == "followers"){
+        $("#followers").attr("checked", true);
+        queryStr += "order by net_followers_inc desc ";
+    }
+    else if(order == "popularity"){
+        $("#popularity").attr("checked", true);
+        queryStr += "order by net_popularity_inc desc ";
+    }
+
     queryStr += "limit " + resultSize + " offset " + (startIdx-1) + ";";
-    
     conn.query(queryStr, function(err, result, fields) {
         if(err)
             console.log(err);
         else{
-            var tableString =   "<tr>" +
+            var tableString =   "<tr style='font-family:fantasy;'>" +
                                     "<td></td>" +
                                     "<td>NAME</td>" +
                                     "<td>GENRE</td>" +
                                     "<td>LABEL</td>" +
                                     "<td>SCORE</td>" +
-                                    "<td>RECENT RELEASE</td>" +
+                                    "<td>FOLLOWERS</td>" +
+                                    "<td>POPULARITY</td>" +
                                 "</tr>";
 
             for(var i = 1; i <= resultSize; i++){
-                result[i-1].most_recent_release_date = (!result[i-1].most_recent_release_date ? "n/a" : result[i-1].most_recent_release_date.toString().substring(4, 15)); 
-                result[i-1].genre = (!result[i-1].genre ? "Not yet classified" : result[i-1].genre); 
+                result[i-1].genres = (!result[i-1].genres ? "No genre info available" : result[i-1].genres); 
+
+                scoreIdxChangeString = result[i-1].score_idx_change >= 0 ? "(<font color='lime'>+" + result[i-1].score_idx_change + "</font>)" : "(<font color='red'>" + result[i-1].score_idx_change + "</font>)";
+                scoreNetChangeString = result[i-1].net_score_inc >= 0 ? "(<font color='lime'>+" + result[i-1].net_score_inc + "</font>)" : "(<font color='red'>" + result[i-1].net_score_inc + "</font>)";
+                followersNetChangeString = result[i-1].net_followers_inc >= 0 ? "(<font color='lime'>+" + result[i-1].net_followers_inc + "</font>)" : "(<font color='red'>" + result[i-1].net_followers_inc + "</font>)";
+                popularityNetChangeString = result[i-1].net_popularity_inc >= 0 ? "(<font color='lime'>+" + result[i-1].net_popularity_inc + "</font>)" : "(<font color='red'>" + result[i-1].net_popularity_inc + "</font>)";
+                
                 tableString +=  "<tr>" +
-                                    "<td>" + (i - 1 + (+startIdx)) + "</td>" +
-                                    "<td><a class='artistLink' href='/?artist=" + result[i-1].name + "'>" + result[i-1].name + "</a></td>" +
-                                    "<td>" + result[i-1].genre + "</td>" +
+                                    "<td>" + (i - 1 + (+startIdx)) + " " + scoreIdxChangeString + "</td>" +
+                                    "<td><a class='artistLink' href='/?artist=" + result[i-1].id + "'>" + result[i-1].name + "</a></td>" +
+                                    "<td>" + result[i-1].genres + "</td>" +
                                     "<td>" + result[i-1].label + "</td>" +
-                                    "<td>" + result[i-1].score + "</td>" +
-                                    "<td>" + result[i-1].most_recent_release_date + "</td>" +
+                                    "<td>" + result[i-1].score + " " + scoreNetChangeString + "</td>" +
+                                    "<td>" + result[i-1].followers + " " + followersNetChangeString + "</td>" +
+                                    "<td>" + result[i-1].popularity + " " + popularityNetChangeString + "</td>" +
                                 "</tr>";
             }
             $("table").each(function () {
@@ -198,13 +223,18 @@ function modifyRankingsPage(html, startIdx, resultSize, genres, labels, callback
 }
 
 function modifyArtistPage(html, artist, callback){
-    conn.query("select * from (select * from artist_info where name='" + artist + "' order by most_recent_release_date desc) as a " + 
-                        "join artist_metrics as b on a.id=b.id;", function(err, result,fields) {
+    conn.query("select * from (select * from artist_info where id='" + artist + "' order by most_recent_release_date desc) as a " +  
+                    "join artist_metrics as b on a.id=b.id;", function(err, result,fields) {
         if(err)
             console.log(err);
         else{
             result[0].most_recent_release_date = (!result[0].most_recent_release_date ? "n/a" : result[0].most_recent_release_date.toString().substring(4, 15)); 
-
+            result[0].genres = (!result[0].genres ? "No genre info available" : result[0].genres); 
+            result[0].score = (!result[0].score ? "No score given" : result[0].score); 
+            result[0].net_score_inc = (!result[0].net_score_inc ? 0 : result[0].net_score_inc); 
+            result[0].net_followers_inc = (!result[0].net_followers_inc ? 0 : result[0].net_followers_inc); 
+            result[0].net_popularity_inc = (!result[0].net_popularity_inc ? 0 : result[0].net_popularity_inc); 
+            
             var dom = new JSDOM(html);
             var $ = require('jquery')(dom.window);
             $("#artistImage").attr("src", result[0].image_url);
@@ -213,12 +243,17 @@ function modifyArtistPage(html, artist, callback){
                 $(this).html("<b>" + result[0].name + "</b><br>"); 
             });
 
+            scoreNetChangeString = result[0].net_score_inc >= 0 ? "(<font color='lime'>+" + result[0].net_score_inc + "</font>)" : "(<font color='red'>" + result[0].net_score_inc + "</font>)";
+            followersNetChangeString = result[0].net_followers_inc >= 0 ? "(<font color='lime'>+" + result[0].net_followers_inc + "</font>)" : "(<font color='red'>" + result[0].net_followers_inc + "</font>)";
+            popularityNetChangeString = result[0].net_popularity_inc >= 0 ? "(<font color='lime'>+" + result[0].net_popularity_inc + "</font>)" : "(<font color='red'>" + result[0].net_popularity_inc + "</font>)";
+            
             $("#artistDetail").each(function() {
                 $(this).html("<table id='artistDetailTable'>" + 
+                                "<tr><th>Score</th><td>" + result[0].score + " " + scoreNetChangeString + "</td></tr>" +
+                                "<tr><th>Followers</th><td>" + result[0].followers + " " + followersNetChangeString + "</td></tr>" +
+                                "<tr><th>Popularity</th><td>" + result[0].popularity + " " + popularityNetChangeString + "</td></tr>" +
+                                "<tr><th>Genres</th><td>" + result[0].genres + "</td></tr>" +
                                 "<tr><th>Label</th><td>" + result[0].label + "</td></tr>" +
-                                "<tr><th>Followers</th><td>" + result[0].followers + "</td></tr>" +
-                                "<tr><th>Popularity</th><td>" + result[0].popularity + "</td></tr>" +
-                                "<tr><th>Score</th><td>" + result[0].score + "</td></tr>" +
                                 "<tr><th>Most Recent Release</th><td>" + result[0].most_recent_release_title + "</td></tr>" +
                                 "<tr><th>Recent Release Date</th><td>" + result[0].most_recent_release_date + "</td></tr>" +
                             "</table>") 
@@ -290,6 +325,7 @@ function modifyArtistPage(html, artist, callback){
                                 "Plotly.newPlot('popularityChart', fig);");
             });
 
+            /*
             var genreString = "";
             conn.query("select genre from genres where id = '" + result[0].id + "';", function(err, result2, fields) {
                 if(err)
@@ -311,12 +347,14 @@ function modifyArtistPage(html, artist, callback){
                 }
                 callback(dom.window.document.documentElement.outerHTML);
             });
+            */
+            callback(dom.window.document.documentElement.outerHTML);
         }
     });
 }
 
 function fillSearchTable(html, search, startIdx, resultSize, callback){
-    conn.query("select name from artist_info where name like '%" + search + "%' limit " + resultSize + " offset " + (startIdx-1) + ";", function(err, result, fields) {
+    conn.query("select id, name from artist_info where name like '%" + search + "%' limit " + resultSize + " offset " + (startIdx-1) + ";", function(err, result, fields) {
         if(err)
             console.log(err);
         else{
@@ -328,7 +366,7 @@ function fillSearchTable(html, search, startIdx, resultSize, callback){
             for(var i = 0; i < result.length; i++){
                 tableString +=  "<tr>" +
                                     "<td>" + (i + (+startIdx)) + "</td>" +
-                                    "<td><a class='artistLink' href='/?artist=" + result[i].name + "'>" + result[i].name + "</a></td>" +
+                                    "<td><a class='artistLink' href='/?artist=" + result[i].id + "'>" + result[i].name + "</a></td>" +
                                 "</tr>";
             }
          

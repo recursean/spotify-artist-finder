@@ -10,14 +10,14 @@
     <body>
         <div class="topnav">
             <div class="titlebar">
-                <span id="name">SAF</span>
+                <span id="name">The Come Up</span>
                 <span id="desc">Identifying emerging artists on Spotify</span>
             </div>
             <div>
               <a class="active" href="/">Rankings</a>
               <a href="#about">About</a>
               <form action="/search.html">
-                <input type="text" placeholder="Search.." name="search">
+                <input type="text" placeholder="Search for an artist" name="search">
               </form>
             </div>
         </div>
@@ -25,18 +25,24 @@
             <div id='filtersDiv'>
                 <form id='filters'>
                     <span class="filterLabel"><u>Genres</u></span><br>
-                    <input class="filters" id="any" type="checkbox" name="genre" value="any">Any<br>
-                    <input class="filters" id="pop" type="checkbox" name="genre" value="pop" autocomplete="off">Pop<br>
-                    <input class="filters" id="rock" type="checkbox" name="genre" value="rock">Rock<br>
-                    <input class="filters" id="hip-hop" type="checkbox" name="genre" value="hip-hop">Hip-Hop<br>
-                    <input class="filters" id="country" type="checkbox" name="genre" value="country">Country<br>
-                    <input class="filters" id="electronic" type="checkbox" name="genre" value="electronic">Electronic<br>
-                    <input class="filters" id="indie" type="checkbox" name="genre" value="indie">Indie<br>
+                    <input class="filters genreFilter" id="any" type="checkbox" name="genre" value="any">Any<br>
+                    <input class="filters genreFilter" id="pop" type="checkbox" name="genre" value="pop">Pop<br>
+                    <input class="filters genreFilter" id="rock" type="checkbox" name="genre" value="rock">Rock<br>
+                    <input class="filters genreFilter" id="hip-hop" type="checkbox" name="genre" value="hip-hop">Hip-Hop<br>
+                    <input class="filters genreFilter" id="country" type="checkbox" name="genre" value="country">Country<br>
+                    <input class="filters genreFilter" id="electronic" type="checkbox" name="genre" value="electronic">Electronic<br>
+                    <input class="filters genreFilter" id="indie" type="checkbox" name="genre" value="indie">Indie<br>
 
                     <span class="filterLabel"><u>Omit Labels</u></span><br>
                     <input class="filters" id="umg" type="checkbox" name="label" value="umg">UMG<br>
                     <input class="filters" id="sony" type="checkbox" name="label" value="sony">Sony<br>
                     <input class="filters" id="warner" type="checkbox" name="label" value="warner">Warner<br>
+                    <br>
+                    
+                    <span class="filterLabel"><u>Order By</u></span><br>
+                    <input class="filters" id="score" type="radio" name="order" value="score" checked>Score<br>
+                    <input class="filters" id="followers" type="radio" name="order" value="followers">Followers Increase<br>
+                    <input class="filters" id="popularity" type="radio" name="order" value="popularity">Popularity Increase<br>
                     <br>
                     
                     <span class="filterLabel"><u>Result Size</u></span><br>
@@ -57,7 +63,7 @@
                 <button class="pagePicker" id="nextBtn">Next</button>
             </div>
             <div id="pageInfo"></div>
-            <script src="../js/main.js"></script>
+            <script src="../js/rankings.js"></script>
         </div>
     </body>
 </html>

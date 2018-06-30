@@ -1,0 +1,5 @@
+[1] "10 number of records read from db"
+[1] "0 number of records with > 100 followers"
+[1] "0 number of artists with more than 7 records"
+[1] "0 number of distinct artists"
+[1] "Scoring artists..."

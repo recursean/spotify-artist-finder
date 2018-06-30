@@ -1,0 +1,6 @@
+Starting data collection at: 1525579202322
+Connecting to database...
+Connected
+Spotify access token retrieved
+ERROR WITH INITIAL SEARCH QUERY
+UNDEFINED RESPONSE

@@ -16,11 +16,15 @@ function setURL(nextFlag){
             else
                 url += "&label=" + filtersForm.elements[i].value;
         }
-        else if(filtersForm.elements[i].type == "radio" && filtersForm.elements[i].checked){
+        else if(filtersForm.elements[i].type == "radio" && filtersForm.elements[i].checked && !(isNaN(filtersForm.elements[i].value))){
             url += "&size=" + filtersForm.elements[i].value;
         }
     }   
     window.location.href = url;
+}
+
+function showToolTip(event){
+    //window.alert(event.target.id);
 }
 
 document.getElementById("prevBtn").onclick = function(){
@@ -30,3 +34,10 @@ document.getElementById("prevBtn").onclick = function(){
 document.getElementById("nextBtn").onclick = function(){
     setURL(true);
 };
+
+var filters = document.getElementsByClassName("genreFilter");
+for(var i = 0; i < filters.length; i++){
+    filters[i].addEventListener("mouseover", showToolTip);   
+}
+
+
