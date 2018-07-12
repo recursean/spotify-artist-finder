@@ -154,7 +154,7 @@ function scrapeSearchResults(conn, albumObj){
 function scrapeArtistAlbumSearchResults(conn, albumObj, lastFlag){
     for(artist in albumObj.artists){ 
         if(albumObj.artists[artist].name.replace(/[^\x00-\x7F]/g, "") != ""){
-            albumInfo.push([albumObj.artists[artist].id, albumObj.name.replace("'", "\\'"), albumObj.release_date, albumObj.label.replace("'", "\\'"), albumObj.tracks.items[0].preview_url]);
+            albumInfo.push([albumObj.artists[artist].id, albumObj.name, albumObj.release_date, albumObj.label, albumObj.tracks.items[0].preview_url]);
         }
     }
   
@@ -167,12 +167,12 @@ function scrapeArtistAlbumSearchResults(conn, albumObj, lastFlag){
 function scrapeArtistSearchResults(conn, artistObj, lastFlag){
     if(artistObj.name.replace(/[^\x00-\x7F]/g, "") != ""){
         if(typeof artistObj.images[0] != "undefined")
-            artistInfo.push([artistObj.id, artistObj.name.replace("'", "\\'"), artistObj.images[0].url]);
+            artistInfo.push([artistObj.id, artistObj.name, artistObj.images[0].url]);
         else
-            artistInfo.push([artistObj.id, artistObj.name.replace("'", "\\'"), ""]);
+            artistInfo.push([artistObj.id, artistObj.name, ""]);
 
         for(genre in artistObj.genres){
-            genreList.push([artistObj.id, artistObj.genres[genre].replace("'", "\\'")]);
+            genreList.push([artistObj.id, artistObj.genres[genre]]);
         }
 
         if(lastFlag == true){

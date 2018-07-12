@@ -1,0 +1,6 @@
+[1] "1516820 number of records read from db"
+[1] "346902 number of records with > 100 followers"
+[1] "0 number of artists with more than 7 records"
+[1] "0 number of distinct artists"
+[1] "Scoring artists..."
+[1] "Finished in apply loop"

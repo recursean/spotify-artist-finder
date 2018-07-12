@@ -79,6 +79,10 @@ app.get('/search.html', function(req, res){
     });
 })
 
+app.get('/img/logo.png', function (req, res) {
+    res.sendFile("img/logo.png", {root: __dirname });
+})
+
 app.get('/css/main.css', function (req, res) {
     res.sendFile("css/main.css", {root: __dirname });
 })
@@ -354,7 +358,7 @@ function modifyArtistPage(html, artist, callback){
 }
 
 function fillSearchTable(html, search, startIdx, resultSize, callback){
-    conn.query("select id, name from artist_info where name like '%" + search + "%' limit " + resultSize + " offset " + (startIdx-1) + ";", function(err, result, fields) {
+    conn.query("select id, name from artist_info where name like " + mysql.escape('%' + search + '%') + " limit " + resultSize + " offset " + (startIdx-1) + ";", function(err, result, fields) {
         if(err)
             console.log(err);
         else{

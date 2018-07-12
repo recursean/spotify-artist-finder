@@ -108,7 +108,8 @@ function insertToDatabase(conn){
 }
 
 function scrapeArtistSearchResults(conn, artistObj, lastFlag){
-    metrics.push([artistObj.id, artistObj.followers.total, artistObj.popularity]);
+    if(artistObj != null)
+        metrics.push([artistObj.id, artistObj.followers.total, artistObj.popularity]);
 
     if(lastFlag){
         console.log("Inserting to DB");
@@ -136,8 +137,10 @@ function analyzeArtistSearchResults(conn, err, resp, body, lastFlag){
             if(resp.statusCode == 429)
                 sleep(resp.caseless.dict['retry-after']);
             //502 --> Bad Gateway, 503 --> service unavailable, assuming overload of traffic
-            else
+            else{
+                console.log(resp);
                 sleep(10);
+            }
         }
         var options = {
             url: resp.request.href,
@@ -184,6 +187,7 @@ function searchForArtistMetrics(conn){
         }
         artistIdList += ids.pop().id + ",";
     }
+
     var options = {
         url: "https://api.spotify.com/v1/artists?ids=" + artistIdList.substring(0, artistIdList.length-1),
         method: "get",
